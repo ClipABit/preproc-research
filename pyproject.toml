@@ -1,0 +1,31 @@
+[project]
+name = "video-preprocessing-demo"
+version = "0.1.0"
+description = "Interactive demo for video preprocessing strategies in semantic search"
+authors = [
+    {name = "Adithya Thayyil", email = "athayyil@uwaterloo.ca"},
+]
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "streamlit>=1.28.0",
+    "opencv-python>=4.8.0",
+    "numpy>=1.24.0",
+    "scipy>=1.11.4",
+    "plotly>=5.17.0",
+    "scenedetect[opencv]>=0.6.2",
+    "ffmpeg-python>=0.2.0",
+    "matplotlib>=3.7.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/ClipABit"
+Repository = "https://github.com/ClipABit"
+
+[tool.uv]
+dev-dependencies = []
+
+# This is a script-based project, not a package
+# Run with: uv run streamlit run app.py
+# Or: uv run python generate_test_videos.py
+# Or: uv run python test_preprocessing.py

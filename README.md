@@ -158,24 +158,6 @@ Uses PySceneDetect with ContentDetector:
 3. Split scenes longer than maximum duration
 4. Results in bounded, semantically coherent chunks
 
-## 🧩 Next Steps
-
-After understanding preprocessing with this demo:
-
-1. **Month 1-2**: Implement preprocessing pipeline in production codebase
-2. **Month 2**: Integrate with embedding generation (CLIP, YOLO)
-3. **Month 3**: Add facial recognition to preprocessing
-4. **Month 4+**: Optimize based on real usage data
-
-## 🤝 Contributing
-
-This is part of the WAT.ai ClipABit project. Team members can:
-
-1. Experiment with different algorithms
-2. Add new frame selection strategies
-3. Improve scene detection accuracy
-4. Optimize for specific content types
-
 ## 📚 References
 
 - **PySceneDetect**: [scenedetect.com](https://www.scenedetect.com/)
