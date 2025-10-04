@@ -181,7 +181,3 @@ Uses PySceneDetect with ContentDetector:
 - Reduce dense sampling rate
 
 
----
-
-**Built with ❤️by the ClipABit team at WAT.ai**
-
