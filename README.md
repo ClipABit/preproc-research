@@ -36,6 +36,7 @@ uv run streamlit run app.py
 - **Adaptive**: Analyzes motion scores, adjusts rate dynamically (static=0.5fps, dynamic=2fps)
 - **Action**: Uses optical flow to find motion peaks
 
+## References
 
 - **PySceneDetect**: Scene boundary detection via content analysis
 - **OpenCV**: Optical flow, histogram comparison, frame extraction
