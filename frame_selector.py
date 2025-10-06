@@ -7,7 +7,7 @@ This is the most critical component for semantic search quality.
 
 import cv2
 import numpy as np
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from scipy.signal import find_peaks
 
 
@@ -162,11 +162,15 @@ def extract_dense_frames(cap: cv2.VideoCapture, start_time: float, end_time: flo
 
 def extract_adaptive_frames(cap: cv2.VideoCapture, start_time: float, end_time: float,
                            fps: float, motion_threshold: float = 15.0,
-                           min_fps: float = 0.5, max_fps: float = 2.0) -> Tuple[List[np.ndarray], List[float]]:
+                           min_fps: float = 0.5, max_fps: float = 2.0,
+                           use_scene_analysis: bool = True) -> Tuple[List[np.ndarray], List[float]]:
     """
-    Adaptive frame sampling based on motion/change detection.
+    Advanced adaptive frame sampling based on scene complexity and motion detection.
     
-    Static scenes get low sampling rate, dynamic scenes get higher sampling rate.
+    This is the primary method for adaptive sampling. It analyzes the content
+    within each scene chunk and adjusts sampling rate dynamically.
+    
+    Static/simple scenes get low sampling rate, dynamic/complex scenes get higher sampling rate.
     
     Args:
         cap: OpenCV video capture object
@@ -176,6 +180,7 @@ def extract_adaptive_frames(cap: cv2.VideoCapture, start_time: float, end_time: 
         motion_threshold: Threshold for considering content as dynamic (0-100)
         min_fps: Minimum sampling rate for static scenes
         max_fps: Maximum sampling rate for dynamic scenes
+        use_scene_analysis: Use comprehensive scene analysis vs simple motion
     
     Returns:
         Tuple of (frames, timestamps)
@@ -185,38 +190,54 @@ def extract_adaptive_frames(cap: cv2.VideoCapture, start_time: float, end_time: 
     
     start_frame = int(start_time * fps)
     end_frame = int(end_time * fps)
+    duration_frames = end_frame - start_frame
     
-    # First, analyze motion across the chunk
-    motion_scores = []
-    prev_frame = None
+    if duration_frames <= 0:
+        return [], []
     
-    for frame_idx in range(start_frame, end_frame, max(1, int(fps / 10))):  # Sample every 0.1s for analysis
-        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
-        ret, frame = cap.read()
+    # Phase 1: Analyze the scene to determine complexity
+    if use_scene_analysis:
+        complexity_metrics = analyze_chunk_complexity(cap, start_frame, end_frame, fps)
         
-        if not ret:
-            continue
+        # Determine sampling rate based on comprehensive complexity
+        complexity_score = complexity_metrics['complexity_score']
+        sampling_fps = min_fps + (max_fps - min_fps) * complexity_score
+        sampling_fps = np.clip(sampling_fps, min_fps, max_fps)
         
-        if prev_frame is not None:
-            # Calculate motion using frame difference
-            diff_score = calculate_frame_difference(prev_frame, frame) * 100
-            motion_scores.append(diff_score)
-        
-        prev_frame = frame
-    
-    # Determine if chunk is static or dynamic
-    avg_motion = np.mean(motion_scores) if motion_scores else 0
-    
-    # Interpolate sampling rate based on motion
-    if avg_motion < motion_threshold:
-        # Static scene - use minimum sampling
-        sampling_fps = min_fps
+        print(f"Scene analysis: complexity={complexity_score:.3f}, "
+              f"motion={complexity_metrics['motion_level']:.3f}, "
+              f"diversity={complexity_metrics['visual_diversity']:.3f}, "
+              f"sampling_fps={sampling_fps:.2f}")
     else:
-        # Dynamic scene - scale sampling rate
-        motion_factor = min(1.0, avg_motion / (motion_threshold * 2))
-        sampling_fps = min_fps + (max_fps - min_fps) * motion_factor
+        # Simple motion-based analysis (original method)
+        motion_scores = []
+        prev_frame = None
+        
+        # Sample frames for analysis
+        analysis_interval = max(1, int(fps / 10))  # Sample every 0.1s
+        for frame_idx in range(start_frame, end_frame, analysis_interval):
+            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+            ret, frame = cap.read()
+            
+            if not ret:
+                continue
+            
+            if prev_frame is not None:
+                diff_score = calculate_frame_difference(prev_frame, frame) * 100
+                motion_scores.append(diff_score)
+            
+            prev_frame = frame
+        
+        # Determine sampling rate based on motion
+        avg_motion = np.mean(motion_scores) if motion_scores else 0
+        
+        if avg_motion < motion_threshold:
+            sampling_fps = min_fps
+        else:
+            motion_factor = min(1.0, avg_motion / (motion_threshold * 2))
+            sampling_fps = min_fps + (max_fps - min_fps) * motion_factor
     
-    # Extract frames at determined rate
+    # Phase 2: Extract frames at determined rate
     frame_interval = max(1, int(fps / sampling_fps))
     current_frame = start_frame
     
@@ -230,7 +251,121 @@ def extract_adaptive_frames(cap: cv2.VideoCapture, start_time: float, end_time: 
         
         current_frame += frame_interval
     
+    # Ensure at least one frame per scene
+    if not frames and duration_frames > 0:
+        mid_frame = (start_frame + end_frame) // 2
+        cap.set(cv2.CAP_PROP_POS_FRAMES, mid_frame)
+        ret, frame = cap.read()
+        if ret:
+            frames.append(frame)
+            timestamps.append(mid_frame / fps)
+    
     return frames, timestamps
+
+
+def analyze_chunk_complexity(cap: cv2.VideoCapture, start_frame: int, end_frame: int, 
+                            fps: float, sample_size: int = 15) -> Dict[str, float]:
+    """
+    Analyze visual complexity of a video chunk for adaptive sampling.
+    
+    Returns comprehensive metrics:
+    - motion_level: Average motion/change between frames
+    - visual_diversity: Overall visual variation in the chunk
+    - edge_density: Amount of detail/texture
+    - color_variance: Color distribution variance
+    - complexity_score: Combined score (0-1) for sampling rate determination
+    
+    Args:
+        cap: OpenCV video capture object
+        start_frame: Starting frame index
+        end_frame: Ending frame index
+        fps: Video frame rate
+        sample_size: Number of frames to sample for analysis
+    
+    Returns:
+        Dictionary with complexity metrics
+    """
+    duration_frames = end_frame - start_frame
+    
+    if duration_frames <= 0:
+        return {
+            'motion_level': 0.0,
+            'visual_diversity': 0.0,
+            'edge_density': 0.0,
+            'color_variance': 0.0,
+            'complexity_score': 0.0,
+        }
+    
+    # Sample frames evenly
+    sample_interval = max(1, duration_frames // sample_size)
+    
+    motion_scores = []
+    edge_densities = []
+    color_variances = []
+    sampled_frames = []
+    prev_frame = None
+    
+    for i in range(sample_size):
+        frame_idx = start_frame + (i * sample_interval)
+        if frame_idx >= end_frame:
+            break
+        
+        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+        ret, frame = cap.read()
+        
+        if not ret:
+            continue
+        
+        sampled_frames.append(frame)
+        
+        # 1. Edge density (texture/detail)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        edges = cv2.Canny(gray, 100, 200)
+        edge_density = np.sum(edges > 0) / edges.size
+        edge_densities.append(edge_density)
+        
+        # 2. Color variance
+        color_std = np.std(frame)
+        color_variances.append(color_std / 255.0)  # Normalize
+        
+        # 3. Motion (frame-to-frame change)
+        if prev_frame is not None:
+            motion = calculate_frame_difference(prev_frame, frame)
+            motion_scores.append(motion)
+        
+        prev_frame = frame
+    
+    # 4. Visual diversity (variation across all frames)
+    diversity_scores = []
+    for i in range(len(sampled_frames)):
+        for j in range(i + 1, min(i + 4, len(sampled_frames))):  # Compare with next 3 frames
+            diversity = calculate_frame_difference(sampled_frames[i], sampled_frames[j])
+            diversity_scores.append(diversity)
+    
+    # Aggregate metrics
+    motion_level = np.mean(motion_scores) if motion_scores else 0.0
+    visual_diversity = np.mean(diversity_scores) if diversity_scores else 0.0
+    edge_density = np.mean(edge_densities) if edge_densities else 0.0
+    color_variance = np.mean(color_variances) if color_variances else 0.0
+    
+    # Calculate combined complexity score (weighted average)
+    # Higher motion and diversity = more complex = needs more samples
+    complexity_score = (
+        motion_level * 0.40 +          # Motion is most important
+        visual_diversity * 0.30 +       # Overall scene changes
+        edge_density * 0.20 +           # Detail level
+        color_variance * 0.10           # Color richness
+    )
+    
+    complexity_score = np.clip(complexity_score, 0.0, 1.0)
+    
+    return {
+        'motion_level': float(motion_level),
+        'visual_diversity': float(visual_diversity),
+        'edge_density': float(edge_density),
+        'color_variance': float(color_variance),
+        'complexity_score': float(complexity_score),
+    }
 
 
 def calculate_motion_score(frame1: np.ndarray, frame2: np.ndarray) -> float:
