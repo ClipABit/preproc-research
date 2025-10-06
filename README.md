@@ -11,18 +11,6 @@ uv run streamlit run app.py
 
 **Requires:** Python 3.9+, FFmpeg (optional)
 
-## Research Goals
-
-Compare approaches for creating searchable video embeddings:
-
-1. **Scene-based LLM descriptions**: PySceneDetect → keyframes → LLM → text embeddings
-2. **Dense visual embeddings**: Fixed interval frame extraction → CLIP/image model
-3. **Adaptive visual embeddings**: Motion-based sampling → CLIP/image model
-4. **Multimodal fusion**: Combine video, audio transcription, and text descriptions
-5. **Reranking strategies**: Vector search vs. reranking with larger models
-
-**Key Question**: Which modality combination provides best accuracy/cost tradeoff?
-
 ##  Preprocessing Techniques
 
 ### Chunking Strategies
@@ -48,53 +36,6 @@ Compare approaches for creating searchable video embeddings:
 - **Adaptive**: Analyzes motion scores, adjusts rate dynamically (static=0.5fps, dynamic=2fps)
 - **Action**: Uses optical flow to find motion peaks
 
-### Recommended Settings
-
-**For LLM Text Embedding Pipeline:**
-- Chunking: Scene Detection (semantic coherence)
-- Frames: Keyframe (1-2 per scene)
-- Rationale: Minimize expensive LLM API calls
-
-**For CLIP Image Embedding:**
-- Chunking: Hybrid (5-20s)
-- Frames: Adaptive Sampling (0.5-2 fps)
-- Rationale: Balance coverage with storage
-
-**For Multimodal (Video + Audio + Text):**
-- Chunking: Hybrid (5-20s)
-- Video: Adaptive frames for CLIP
-- Text: Keyframes for LLM descriptions
-- Audio: Fixed 1fps timestamps for alignment
-- Rationale: Optimize each modality independently
-
-##  Comparison Metrics
-
-Track these for each approach:
-- **Processing time**: Frame extraction, model inference
-- **Storage**: Total frames, compressed size
-- **Model costs**: API calls (LLM), inference time (CLIP)
-- **Search accuracy**: Precision/recall on test queries
-- **Resource usage**: Memory, GPU utilization
-
-## Technical Architecture
-
-```
-app.py                  # Streamlit demo UI
-├── frame_selector.py   # Frame selection algorithms
-│   ├── extract_keyframes()        # Diversity-based selection
-│   ├── extract_dense_frames()     # Fixed interval sampling
-│   ├── extract_adaptive_frames()  # Motion-based variable rate
-│   └── extract_action_frames()    # Optical flow peak detection
-├── scene_detector.py   # Scene detection utilities
-│   ├── detect_scenes()            # PySceneDetect wrapper
-│   └── apply_scene_constraints()  # Min/max duration constraints
-└── video_processor.py  # Compression & metadata
-    ├── get_video_info()
-    ├── compress_video()
-    └── resize_video()
-```
-
-## References
 
 - **PySceneDetect**: Scene boundary detection via content analysis
 - **OpenCV**: Optical flow, histogram comparison, frame extraction
