@@ -16,14 +16,14 @@ from dataclasses import dataclass
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from frame_selector import (
+from src.frame_selector import (
     extract_keyframes,
     extract_dense_frames,
     extract_adaptive_frames,
     calculate_frame_difference
 )
-from scene_detector import detect_scenes, visualize_scene_timeline
-from video_processor import compress_video, get_video_info, resize_video
+from src.scene_detector import detect_scenes, visualize_scene_timeline
+from src.video_processor import compress_video, get_video_info, resize_video
 
 
 @dataclass
