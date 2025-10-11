@@ -6,7 +6,7 @@ Comparing multimodal embedding strategies for semantic video search. Part of [Cl
 
 ```bash
 uv sync
-uv run streamlit run app.py
+uv run streamlit run src/app.py
 ```
 
 **Requires:** Python 3.9+, FFmpeg (optional)
