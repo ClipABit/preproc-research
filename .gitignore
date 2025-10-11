@@ -71,3 +71,6 @@ Thumbs.db
 # Compressed videos
 *_compressed.mp4
 *_resized.mp4
+
+# Keep specific files
+!pipeline.png
