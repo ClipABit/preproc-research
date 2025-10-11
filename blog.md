@@ -20,7 +20,7 @@ Video is continuous. Search needs discrete chunks. How do you split "cooking din
 **Approaches tried:**
 
 - **Static chunking** (every 10 seconds): Simple but dumb. Splits activities mid-action. Your "pouring coffee" search hits two chunks: "pour—" and "—ing coffee."
-- **Scene detection** (`PySceneDetect`): Uses histogram differences between consecutive frames to detect cuts. Works great for semantically meaningful boundaries but unpredictable; you get 2-second chunks and 60-second chunks. Critical for aligning chunks with actual content changes [1].
+- **Scene detection** (`PySceneDetect`): Uses histogram differences between consecutive frames to detect cuts. Works great for semantically meaningful boundaries but unpredictable; you get 2-second chunks and 60-second chunks. Critical for aligning chunks with actual content changes [[1]](#references).
 - **Hybrid** (scene detection + constraints): **Our winner.** Detect scene changes but enforce 5–20 second limits. Semantic boundaries without chaos.
 
 ```python
@@ -44,7 +44,7 @@ def chunk_hybrid(video_path, min_duration=5, max_duration=20):
     return chunks
 ```
 
-**Result:** ~20,000 semantic chunks for 100 hours, all 5–20 seconds long. Matches what VideoCLIP and similar video-text models expect [2].
+**Result:** ~20,000 semantic chunks for 100 hours, all 5–20 seconds long. Matches what VideoCLIP and similar video-text models expect [[2]](#references).
 
 ### Frame Selection: Which frames actually matter?
 
@@ -82,7 +82,7 @@ def analyze_chunk(chunk):
 - Sleeping: complexity = $0.15$ → $0.5$ fps → $5$ frames/$10$s
 - Cooking: complexity = $0.75$ → $1.8$ fps → $18$ frames/$10$s
 
-**Result:** A lot of storage reduction vs dense sampling, same search quality. Important for downstream CLIP-based video encoders [3].
+**Result:** A lot of storage reduction vs dense sampling, same search quality. Important for downstream CLIP-based video encoders [[3]](#references).
 
 ### Quality Filtering: Remove the junk
 
@@ -152,3 +152,20 @@ git clone https://github.com/ClipABit/preproc-research.git
 uv sync
 uv run streamlit run app.py
 ```
+
+---
+## References
+
+[1] **PySceneDetect: Intelligent Scene Detection for Videos**  
+Brandon Castellano. *GitHub Repository*. https://github.com/Breakthrough/PySceneDetect  
+Open-source tool for automatic scene boundary detection using content-aware algorithms (histogram differences, adaptive thresholding).
+
+[2] **VideoCLIP: Contrastive Pre-Training for Zero-shot Video-Text Understanding**  
+Xu et al. *EMNLP 2021*.  
+https://arxiv.org/abs/2109.14084  
+Demonstrates effective video-text alignment using 5-20 second temporal chunks with sparse frame sampling for efficient multimodal learning.
+
+[3] **CLIP: Learning Transferable Visual Models From Natural Language Supervision**  
+Radford et al. *OpenAI, 2021*.  
+https://arxiv.org/abs/2103.00020  
+Foundation model for image-text understanding. Frame selection strategies optimize the trade-off between coverage and computational efficiency for CLIP-based video encoders.
