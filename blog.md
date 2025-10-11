@@ -150,5 +150,5 @@ Or run it locally:
 ```bash
 git clone https://github.com/ClipABit/preproc-research.git
 uv sync
-uv run streamlit run app.py
+uv run streamlit run src/app.py
 ```
